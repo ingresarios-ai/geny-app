@@ -1,0 +1,104 @@
+* { box-sizing: border-box; }
+
+html, body, #root { height: 100%; }
+
+body {
+  margin: 0;
+  background: #F5F1E9;
+  font-family: 'Instrument Sans', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  color: #16281E;
+}
+
+/* App container — centrado, max-width para que se vea bien en desktop */
+.app-container {
+  max-width: 480px;
+  margin: 0 auto;
+  min-height: 100dvh;
+  position: relative;
+  background: #F5F1E9;
+}
+
+/* En desktop: agregar sombra sutil para separar del fondo */
+@media (min-width: 481px) {
+  body {
+    background: #EDE9DF;
+  }
+  .app-container {
+    box-shadow: 0 0 60px rgba(22, 40, 30, 0.08);
+  }
+}
+
+/* Barra de progreso animada (300ms ease-out al entrar) */
+.bar-fill { transition: width 300ms ease-out; }
+
+button.reset {
+  font: inherit;
+  color: inherit;
+  border: none;
+  background: none;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  text-align: inherit;
+}
+
+.tap { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.tap:active { opacity: 0.85; }
+
+/* scroll interno sin barra visible */
+.scroll { overflow-y: auto; scrollbar-width: none; }
+.scroll::-webkit-scrollbar { display: none; }
+
+.hscroll { overflow-x: auto; scrollbar-width: none; }
+.hscroll::-webkit-scrollbar { display: none; }
+
+/* image-slot llena su contenedor (regla del handoff para 3a/5a) */
+image-slot { display: block; width: 100%; height: 100%; }
+
+/* punto "En vivo" pulsante */
+@keyframes livePulse {
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.5); opacity: 0.5; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.live-dot { animation: livePulse 1.4s ease-in-out infinite; }
+
+/* View mode switch */
+.mode-switch {
+  display: flex;
+  gap: 2px;
+  background: rgba(22, 40, 30, 0.06);
+  border-radius: 999px;
+  padding: 3px;
+}
+.mode-switch button {
+  flex: 1;
+  padding: 7px 14px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  transition: background 200ms, color 200ms;
+}
+.mode-switch button.active {
+  background: #16281E;
+  color: #F5F1E9;
+}
+.mode-switch button:not(.active) {
+  background: transparent;
+  color: #5C6B60;
+}
+
+/* Loading spinner */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(196, 98, 45, 0.2);
+  border-top-color: #C4622D;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin: 0 auto;
+}
