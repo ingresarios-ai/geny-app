@@ -111,7 +111,7 @@ export default function Auth() {
     try {
       if (mode === 'login') {
         const { error: err } = await signIn(email, password)
-        if (err) setError(err)
+        if (err) setError(typeof err === 'string' ? err : 'Error al iniciar sesión')
       } else if (mode === 'register') {
         if (!name.trim()) { setError('Ingresa tu nombre'); setLoading(false); return }
         if (password !== confirmPassword) { setError('Las contraseñas no coinciden'); setLoading(false); return }
@@ -122,7 +122,7 @@ export default function Auth() {
           phone_country: countryCode,
         })
         if (err) {
-          setError(err)
+          setError(typeof err === 'string' ? err : 'Error al crear la cuenta')
         } else {
           setSuccess('¡Cuenta creada! Revisa tu email para confirmar.')
         }
@@ -137,7 +137,7 @@ export default function Auth() {
           phone_country: countryCode,
         })
         if (regErr) {
-          setError(regErr)
+          setError(typeof regErr === 'string' ? regErr : 'Error al crear la cuenta')
         } else {
           // Note: joining will happen after email confirmation + login
           setSuccess('¡Cuenta creada! Confirma tu email y luego inicia sesión para unirte al hogar.')
@@ -400,7 +400,7 @@ export default function Auth() {
           {/* Error / Success */}
           {error && (
             <div style={{ background: 'rgba(196,98,45,0.2)', border: '1px solid rgba(196,98,45,0.4)', borderRadius: 12, padding: '10px 14px', fontSize: 13, color: c.clay }}>
-              {error}
+              {typeof error === 'string' ? error : 'Ocurrió un error al procesar tu solicitud'}
             </div>
           )}
           {success && (

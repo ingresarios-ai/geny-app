@@ -127,20 +127,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     password: string,
     meta: { display_name: string; family_name: string; phone: string; phone_country: string },
   ): Promise<{ error: string | null }> {
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          display_name: meta.display_name,
-          family_name: meta.family_name,
-          phone: meta.phone,
-          phone_country: meta.phone_country,
+    try {
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            display_name: meta.display_name,
+            family_name: meta.family_name,
+            phone: meta.phone,
+            phone_country: meta.phone_country,
+          },
         },
-      },
-    })
-    if (error) return { error: error.message }
-    return { error: null }
+      })
+      if (error) return { error: error.message || 'Error al crear la cuenta' }
+      return { error: null }
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Error inesperado al crear la cuenta'
+      return { error: msg }
+    }
   }
 
   // Sign in
