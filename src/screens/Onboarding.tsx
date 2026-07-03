@@ -45,15 +45,11 @@ export default function Onboarding() {
         return
       }
       await api.updateRouteProgress(hh.id, {
-        stage: selected,
+        stage: 1,
         progress: 0,
-        mission: selected === 1
-          ? 'Registra 7 días seguidos para desbloquear "Tu primer presupuesto que sí funciona".'
-          : selected === 2
-            ? 'Completa tu presupuesto y define tu primera meta de ahorro.'
-            : 'Explora el simulador y aprende riesgo con dinero virtual.',
+        mission: 'Registra tu primer gasto para comenzar tu ruta.',
       })
-      dispatch({ type: 'SET_STAGE', stage: selected })
+      dispatch({ type: 'SET_STAGE', stage: 1 })
       dispatch({ type: 'FINISH_ONBOARDING' })
     } finally {
       setSaving(false)
