@@ -217,12 +217,12 @@ export default function Auth() {
               {/* Family name (only for new registration, not join) */}
               {mode === 'register' && (
                 <div>
-                  <label style={labelStyle}>Nombre del hogar</label>
+                  <label style={labelStyle}>Nombre de tu equipo familiar</label>
                   <input
                     type="text"
                     value={familyName}
                     onChange={(e) => setFamilyName(e.target.value)}
-                    placeholder="Ej: Rodríguez"
+                    placeholder="Ej: Equipo García"
                     style={inputStyle}
                   />
                 </div>
