@@ -1,4 +1,7 @@
+import { useState, useEffect } from 'react'
 import { useStore, categoryLabel } from '../store'
+import { useAuth } from '../lib/auth'
+import * as api from '../lib/api'
 import { c, serif } from '../theme'
 
 function money(n: number) {
@@ -7,12 +10,21 @@ function money(n: number) {
 
 export default function Ordenar() {
   const { state, dispatch } = useStore()
+  const { household } = useAuth()
   const { route, entries, budgets } = state
+
+  // Fetch goals
+  const [goalCount, setGoalCount] = useState(0)
+  useEffect(() => {
+    if (!household) return
+    api.fetchGoals(household.id).then(g => setGoalCount(g.length))
+  }, [household])
 
   // Progress milestones for Stage 1: Ordenar
   const totalGastos = entries.filter(e => e.kind === 'gasto').length
   const totalIngresos = entries.filter(e => e.kind === 'ingreso').length
   const hasBudget = budgets.length > 0
+  const hasGoal = goalCount > 0
   const streak = route.streak
 
   // Today's data
@@ -41,6 +53,14 @@ export default function Ordenar() {
       done: totalIngresos >= 1,
       icon: '💰',
       action: () => dispatch({ type: 'OPEN_REGISTRO', kind: 'ingreso' }),
+    },
+    {
+      key: 'meta',
+      title: 'Establece tu primera meta',
+      desc: 'Define para qué quieres ahorrar: emergencia, vacaciones, etc.',
+      done: hasGoal,
+      icon: '🎯',
+      action: () => dispatch({ type: 'SET_TAB', tab: 'presupuesto' }),
     },
     {
       key: 'racha3',
