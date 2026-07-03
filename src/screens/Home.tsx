@@ -109,95 +109,161 @@ export default function Home() {
         </div>
       )}
 
-      {/* Tarjeta Ruta */}
-      <div style={{ padding: '0 22px' }}>
-        <div style={{ background: c.ink, color: c.cream, borderRadius: 18, padding: 20 }}>
-          <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: c.sage, margin: '0 0 12px 0' }}>
-            Tu ruta · Etapa {route.stage} de 3
-          </p>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 0, marginBottom: 14 }}>
-            {NODES.map((label, i) => {
-              const n = i + 1
-              const active = n === route.stage
-              const node = (
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-                  <button
-                    className="reset tap"
-                    onClick={() => {
-                      if (n === 2) dispatch({ type: 'SET_TAB', tab: 'ruta' })
-                      if (n === 3) dispatch({ type: 'GO', screen: 'simulador' })
-                    }}
-                    style={{
-                      width: 34,
-                      height: 34,
-                      borderRadius: 999,
-                      background: active ? c.clay : 'rgba(245,241,233,0.12)',
-                      color: active ? c.cream : c.sage,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontWeight: 700,
-                      fontSize: 14,
-                    }}
-                  >
-                    {n}
-                  </button>
-                  <span style={{ fontSize: 11, fontWeight: active ? 600 : 400, color: active ? c.cream : c.sage }}>{label}</span>
-                </div>
-              )
-              if (i < NODES.length - 1) {
-                const filled = i === 0 ? route.progress : 0
-                return (
-                  <div key={label} style={{ display: 'contents' }}>
-                    {node}
-                    <div style={{ flex: 1, height: 2, background: 'rgba(245,241,233,0.2)', marginBottom: 20, position: 'relative' }}>
-                      <div style={{ position: 'absolute', left: 0, top: 0, height: 2, width: `${filled * 100}%`, background: c.clay }} />
-                    </div>
-                  </div>
-                )
-              }
-              return <div key={label} style={{ display: 'contents' }}>{node}</div>
-            })}
-          </div>
-          <p style={{ fontSize: 13, lineHeight: 1.5, color: c.mist, margin: 0 }}>
-            {route.mission || 'Registra tus primeros gastos para comenzar tu ruta.'}
-          </p>
-        </div>
-      </div>
+      {entries.length === 0 ? (
+        /* ── Welcome guide for new users ── */
+        <>
+          <div style={{ padding: '0 22px' }}>
+            <div style={{ background: c.ink, color: c.cream, borderRadius: 18, padding: '24px 20px' }}>
+              <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.16em', textTransform: 'uppercase', color: c.clay, margin: '0 0 10px 0' }}>
+                ¡Bienvenido a Geny!
+              </p>
+              <h2 style={{ fontFamily: serif, fontWeight: 500, fontSize: 22, lineHeight: 1.2, margin: '0 0 16px 0' }}>
+                Tu ruta para ordenar el dinero de tu familia
+              </h2>
 
-      {/* Este mes */}
-      <div style={{ padding: '18px 22px 0 22px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 }}>
-          <h2 style={{ fontSize: 15, fontWeight: 700, margin: 0 }}>Este mes</h2>
-          <span style={{ fontSize: 12.5, color: monthRemaining >= 0 ? c.green : c.clay, fontWeight: 700 }}>
-            {monthRemaining >= 0 ? `Quedan ${money(monthRemaining)}` : `Excedido ${money(Math.abs(monthRemaining))}`}
-          </span>
-        </div>
-        {budgets.length > 0 ? (
-          <div style={{ background: c.card, border: `1px solid ${c.cardBorder}`, borderRadius: 16, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 13 }}>
-            {budgets.map((b) => {
-              const pct = b.limit > 0 ? b.spent / b.limit : 0
-              const color = pct >= 0.95 ? c.clay : c.green
-              return (
-                <div key={b.key} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <span style={{ fontSize: 17, flex: 'none' }}>{b.emoji}</span>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, fontWeight: 600, marginBottom: 5 }}>
-                      <span>{b.label}</span>
-                      <span>{money(b.spent)} / {money(b.limit)}</span>
-                    </div>
-                    <ProgressBar pct={Math.min(pct, 1)} color={color} />
+              {/* Steps */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <button
+                  className="reset tap"
+                  onClick={() => dispatch({ type: 'OPEN_REGISTRO' })}
+                  style={{ display: 'flex', alignItems: 'center', gap: 14, background: 'rgba(196,98,45,0.2)', border: '1px solid rgba(196,98,45,0.5)', borderRadius: 14, padding: '14px 16px', textAlign: 'left' }}
+                >
+                  <div style={{ width: 36, height: 36, borderRadius: 999, background: c.clay, color: c.cream, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 16, flex: 'none' }}>1</div>
+                  <div>
+                    <p style={{ fontWeight: 700, fontSize: 14, margin: '0 0 2px 0', color: c.cream }}>Registra tu primer gasto</p>
+                    <p style={{ fontSize: 12, color: c.sage, margin: 0 }}>Toca aquí → ingresa lo que gastaste hoy</p>
+                  </div>
+                  <span style={{ fontSize: 16, color: c.clay, flex: 'none', marginLeft: 'auto' }}>→</span>
+                </button>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14, background: 'rgba(245,241,233,0.08)', border: '1px solid rgba(245,241,233,0.15)', borderRadius: 14, padding: '14px 16px', opacity: 0.6 }}>
+                  <div style={{ width: 36, height: 36, borderRadius: 999, background: 'rgba(245,241,233,0.12)', color: c.sage, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 16, flex: 'none' }}>2</div>
+                  <div>
+                    <p style={{ fontWeight: 600, fontSize: 14, margin: '0 0 2px 0', color: c.sage }}>Crea tu presupuesto</p>
+                    <p style={{ fontSize: 12, color: c.inkSecondary, margin: 0 }}>Define cuánto quieres gastar por categoría</p>
                   </div>
                 </div>
-              )
-            })}
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14, background: 'rgba(245,241,233,0.08)', border: '1px solid rgba(245,241,233,0.15)', borderRadius: 14, padding: '14px 16px', opacity: 0.6 }}>
+                  <div style={{ width: 36, height: 36, borderRadius: 999, background: 'rgba(245,241,233,0.12)', color: c.sage, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 16, flex: 'none' }}>3</div>
+                  <div>
+                    <p style={{ fontWeight: 600, fontSize: 14, margin: '0 0 2px 0', color: c.sage }}>Registra cada día</p>
+                    <p style={{ fontSize: 12, color: c.inkSecondary, margin: 0 }}>Construye tu racha y desbloquea la siguiente etapa</p>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
-        ) : (
-          <div style={{ background: c.card, border: `1px solid ${c.cardBorder}`, borderRadius: 16, padding: '24px 18px', textAlign: 'center' }}>
-            <p style={{ fontSize: 14, color: c.muted, margin: 0 }}>Aún no hay presupuestos este mes.<br />Registra tu primer gasto para comenzar.</p>
+
+          {/* Tip */}
+          <div style={{ padding: '14px 22px 0 22px' }}>
+            <button
+              className="reset tap"
+              onClick={() => dispatch({ type: 'SET_TAB', tab: 'ruta' })}
+              style={{ width: '100%', background: c.card, border: `1px solid ${c.cardBorder}`, borderRadius: 14, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12, textAlign: 'left' }}
+            >
+              <span style={{ fontSize: 20, flex: 'none' }}>🗺️</span>
+              <div>
+                <p style={{ fontSize: 13, fontWeight: 700, margin: '0 0 2px 0', color: c.ink }}>Ve tu ruta completa</p>
+                <p style={{ fontSize: 12, color: c.muted, margin: 0 }}>Misiones paso a paso para ordenar tu dinero</p>
+              </div>
+              <span style={{ fontSize: 14, color: c.muted, flex: 'none', marginLeft: 'auto' }}>→</span>
+            </button>
           </div>
-        )}
-      </div>
+        </>
+      ) : (
+        /* ── Normal view for returning users ── */
+        <>
+          {/* Tarjeta Ruta */}
+          <div style={{ padding: '0 22px' }}>
+            <div style={{ background: c.ink, color: c.cream, borderRadius: 18, padding: 20 }}>
+              <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: c.sage, margin: '0 0 12px 0' }}>
+                Tu ruta · Etapa {route.stage} de 3
+              </p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 0, marginBottom: 14 }}>
+                {NODES.map((label, i) => {
+                  const n = i + 1
+                  const active = n === route.stage
+                  const node = (
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+                      <button
+                        className="reset tap"
+                        onClick={() => {
+                          dispatch({ type: 'SET_TAB', tab: 'ruta' })
+                        }}
+                        style={{
+                          width: 34,
+                          height: 34,
+                          borderRadius: 999,
+                          background: active ? c.clay : 'rgba(245,241,233,0.12)',
+                          color: active ? c.cream : c.sage,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontWeight: 700,
+                          fontSize: 14,
+                        }}
+                      >
+                        {n}
+                      </button>
+                      <span style={{ fontSize: 11, fontWeight: active ? 600 : 400, color: active ? c.cream : c.sage }}>{label}</span>
+                    </div>
+                  )
+                  if (i < NODES.length - 1) {
+                    const filled = i === 0 ? route.progress : 0
+                    return (
+                      <div key={label} style={{ display: 'contents' }}>
+                        {node}
+                        <div style={{ flex: 1, height: 2, background: 'rgba(245,241,233,0.2)', marginBottom: 20, position: 'relative' }}>
+                          <div style={{ position: 'absolute', left: 0, top: 0, height: 2, width: `${filled * 100}%`, background: c.clay }} />
+                        </div>
+                      </div>
+                    )
+                  }
+                  return <div key={label} style={{ display: 'contents' }}>{node}</div>
+                })}
+              </div>
+              <p style={{ fontSize: 13, lineHeight: 1.5, color: c.mist, margin: 0 }}>
+                {route.mission || 'Registra tus primeros gastos para comenzar tu ruta.'}
+              </p>
+            </div>
+          </div>
+
+          {/* Este mes */}
+          <div style={{ padding: '18px 22px 0 22px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 }}>
+              <h2 style={{ fontSize: 15, fontWeight: 700, margin: 0 }}>Este mes</h2>
+              <span style={{ fontSize: 12.5, color: monthRemaining >= 0 ? c.green : c.clay, fontWeight: 700 }}>
+                {monthRemaining >= 0 ? `Quedan ${money(monthRemaining)}` : `Excedido ${money(Math.abs(monthRemaining))}`}
+              </span>
+            </div>
+            {budgets.length > 0 ? (
+              <div style={{ background: c.card, border: `1px solid ${c.cardBorder}`, borderRadius: 16, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 13 }}>
+                {budgets.map((b) => {
+                  const pct = b.limit > 0 ? b.spent / b.limit : 0
+                  const color = pct >= 0.95 ? c.clay : c.green
+                  return (
+                    <div key={b.key} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <span style={{ fontSize: 17, flex: 'none' }}>{b.emoji}</span>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, fontWeight: 600, marginBottom: 5 }}>
+                          <span>{b.label}</span>
+                          <span>{money(b.spent)} / {money(b.limit)}</span>
+                        </div>
+                        <ProgressBar pct={Math.min(pct, 1)} color={color} />
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            ) : (
+              <div style={{ background: c.card, border: `1px solid ${c.cardBorder}`, borderRadius: 16, padding: '24px 18px', textAlign: 'center' }}>
+                <p style={{ fontSize: 14, color: c.muted, margin: 0 }}>Aún no hay presupuestos este mes.<br />Ve a Presupuesto para crear uno.</p>
+              </div>
+            )}
+          </div>
+        </>
+      )}
 
       {/* FAB para registrar */}
       <button

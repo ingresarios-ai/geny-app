@@ -172,7 +172,7 @@ function reducer(state: State, action: Action): State {
     case 'SET_STAGE':
       return { ...state, route: { ...state.route, stage: action.stage } }
     case 'FINISH_ONBOARDING':
-      return { ...state, screen: 'app', tab: 'hoy' }
+      return { ...state, screen: 'app', tab: 'ruta' }
     case 'SET_TAB':
       return { ...state, tab: action.tab }
     case 'GO':
