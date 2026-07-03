@@ -144,12 +144,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.log('[signUp] full result:', JSON.stringify(result, null, 2))
 
       if (result.error) {
-        const msg = result.error.message
-          || result.error.msg
-          || (typeof result.error === 'string' ? result.error : null)
-          || JSON.stringify(result.error)
+        const errObj = result.error as { message?: string }
+        const msg = errObj.message || JSON.stringify(result.error)
         // Filter useless messages
-        if (!msg || msg === '{}' || msg === 'null') {
+        if (!msg || msg === '{}' || msg === 'null' || msg === '""') {
           return { error: 'Error al crear la cuenta. Intenta con otro correo.' }
         }
         return { error: msg }
