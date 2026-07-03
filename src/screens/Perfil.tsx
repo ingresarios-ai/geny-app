@@ -104,26 +104,64 @@ export default function Perfil() {
           </div>
         </div>
 
-        {/* Invite code */}
+        {/* Invite family */}
         {household && (
           <div style={{ marginBottom: 16 }}>
             <h2 style={{ fontSize: 15, fontWeight: 700, margin: '0 0 10px 0' }}>Invitar a un familiar</h2>
-            <div style={{ background: c.card, border: `1px solid ${c.cardBorder}`, borderRadius: 14, padding: '14px 16px' }}>
-              <p style={{ fontSize: 13, color: c.muted, margin: '0 0 8px 0', lineHeight: 1.4 }}>
-                Comparte este código para que tu pareja o familiar se una a la familia:
-              </p>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <div style={{ flex: 1, background: c.cream, border: `1px solid ${c.cardBorder}`, borderRadius: 10, padding: '12px 14px', fontFamily: 'monospace', fontSize: 18, fontWeight: 700, letterSpacing: '0.15em', textAlign: 'center' }}>
-                  {household.invite_code}
+            <div style={{ background: c.card, border: `1px solid ${c.cardBorder}`, borderRadius: 14, padding: '16px 16px' }}>
+              <div style={{ display: 'flex', gap: 12, marginBottom: 14 }}>
+                <span style={{ fontSize: 28, flex: 'none' }}>💌</span>
+                <div>
+                  <p style={{ fontSize: 14, fontWeight: 700, margin: '0 0 4px 0' }}>Invita a tu pareja o familia</p>
+                  <p style={{ fontSize: 12.5, color: c.muted, margin: 0, lineHeight: 1.45 }}>
+                    Al abrir el link, tu familiar podrá crear su cuenta y automáticamente se unirá a tu familia <strong>{household.family_name}</strong>. Ambos verán los mismos gastos e ingresos.
+                  </p>
                 </div>
+              </div>
+
+              {/* Steps */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 16, padding: '0 8px' }}>
+                {[
+                  'Tú envías el link por WhatsApp o mensaje',
+                  'Tu familiar abre el link y se registra',
+                  'Automáticamente se une a la familia',
+                  '¡Empiezan a registrar gastos juntos!',
+                ].map((step, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div style={{ width: 22, height: 22, borderRadius: 999, background: c.ink, color: c.cream, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, flex: 'none' }}>
+                      {i + 1}
+                    </div>
+                    <span style={{ fontSize: 12.5, color: '#43544A' }}>{step}</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Buttons */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 <button
                   className="reset tap"
                   onClick={() => {
-                    navigator.clipboard?.writeText(household.invite_code)
+                    const url = `${window.location.origin}?invite=${household.invite_code}`
+                    const text = `¡Hola! Te invito a que nos unamos en Geny para llevar las finanzas juntos. 💰\n\nAbre este link para crear tu cuenta y unirte a la familia ${household.family_name}:\n${url}`
+                    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank')
                   }}
-                  style={{ padding: '12px 16px', borderRadius: 10, background: c.ink, color: c.cream, fontSize: 13, fontWeight: 700, flex: 'none' }}
+                  style={{ width: '100%', padding: 14, borderRadius: 999, background: '#25D366', color: '#fff', fontSize: 14, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
                 >
-                  Copiar
+                  <span style={{ fontSize: 18 }}>📲</span> Invitar por WhatsApp
+                </button>
+                <button
+                  className="reset tap"
+                  onClick={() => {
+                    const url = `${window.location.origin}?invite=${household.invite_code}`
+                    if (navigator.share) {
+                      navigator.share({ title: 'Únete a nuestra familia en Geny', url }).catch(() => {})
+                    } else {
+                      navigator.clipboard?.writeText(url).then(() => alert('¡Link copiado!'))
+                    }
+                  }}
+                  style={{ width: '100%', padding: 14, borderRadius: 999, border: `1px solid ${c.cardBorder}`, fontSize: 14, fontWeight: 700, color: c.ink, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+                >
+                  🔗 Copiar link de invitación
                 </button>
               </div>
             </div>
