@@ -3,6 +3,7 @@ import { useStore } from './store'
 import Auth from './screens/Auth'
 import Onboarding from './screens/Onboarding'
 import Home from './screens/Home'
+import Ordenar from './screens/Ordenar'
 import Aprender from './screens/Aprender'
 import Simulador from './screens/Simulador'
 import Coach from './screens/Coach'
@@ -49,7 +50,7 @@ export default function App() {
         tabView = <Home />
         break
       case 'ruta':
-        tabView = <Aprender />
+        tabView = state.route.stage === 1 ? <Ordenar /> : state.route.stage === 3 ? <Simulador /> : <Aprender />
         break
       case 'presupuesto':
         tabView = <Presupuesto />
