@@ -141,13 +141,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         },
       })
 
-      console.log('[signUp] full result:', JSON.stringify(result, null, 2))
-
       if (result.error) {
-        const errObj = result.error as { message?: string; status?: number; name?: string }
-        const raw = JSON.stringify(result.error)
-        const msg = errObj.message || 'Sin mensaje'
-        return { error: `[${errObj.status || '?'}] ${msg} — RAW: ${raw}` }
+        const msg = result.error.message
+        if (!msg || msg === '{}') {
+          return { error: 'Error al crear la cuenta. Intenta de nuevo.' }
+        }
+        return { error: msg }
       }
 
       // Supabase returns user but no session when email confirmation is pending
