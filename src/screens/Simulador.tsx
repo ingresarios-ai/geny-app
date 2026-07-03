@@ -1,15 +1,81 @@
+import { useState, useMemo } from 'react'
 import { useStore } from '../store'
 import { c, serif } from '../theme'
 
+const PROFILES = [
+  { key: 'conservador', label: 'Conservador', emoji: '🛡️', rate: 0.06, risk: 'bajo', desc: 'Deuda gubernamental, CETES, pagarés' },
+  { key: 'moderado', label: 'Moderado', emoji: '⚖️', rate: 0.10, risk: 'medio', desc: 'Mix de bonos + fondos indexados' },
+  { key: 'agresivo', label: 'Agresivo', emoji: '🚀', rate: 0.15, risk: 'alto', desc: 'Fondos indexados globales, ETFs' },
+] as const
+
+const YEARS_OPTIONS = [1, 3, 5, 10, 20]
+
+function money(n: number) {
+  return '$' + Math.round(n).toLocaleString('es-MX')
+}
+
 export default function Simulador() {
   const { dispatch } = useStore()
+
+  const [initial, setInitial] = useState('10000')
+  const [monthly, setMonthly] = useState('1000')
+  const [profile, setProfile] = useState<typeof PROFILES[number]>(PROFILES[1])
+  const [years, setYears] = useState(5)
+
+  const initialNum = Number(initial) || 0
+  const monthlyNum = Number(monthly) || 0
+
+  // Compound interest calculation
+  const result = useMemo(() => {
+    const r = profile.rate / 12 // monthly rate
+    const n = years * 12 // total months
+    // FV of initial lump sum
+    const fvInitial = initialNum * Math.pow(1 + r, n)
+    // FV of monthly contributions (annuity)
+    const fvMonthly = monthlyNum * ((Math.pow(1 + r, n) - 1) / r)
+    const total = fvInitial + fvMonthly
+    const totalInvested = initialNum + (monthlyNum * n)
+    const gains = total - totalInvested
+    return { total, totalInvested, gains, months: n }
+  }, [initialNum, monthlyNum, profile.rate, years])
+
+  // Generate data points for the chart
+  const chartPoints = useMemo(() => {
+    const points: number[] = []
+    const r = profile.rate / 12
+    const totalMonths = years * 12
+    const step = Math.max(1, Math.floor(totalMonths / 20))
+    for (let m = 0; m <= totalMonths; m += step) {
+      const fvI = initialNum * Math.pow(1 + r, m)
+      const fvM = m > 0 ? monthlyNum * ((Math.pow(1 + r, m) - 1) / r) : 0
+      points.push(fvI + fvM)
+    }
+    return points
+  }, [initialNum, monthlyNum, profile.rate, years])
+
+  // Build SVG path
+  const svgPath = useMemo(() => {
+    if (chartPoints.length < 2) return ''
+    const max = Math.max(...chartPoints)
+    const min = 0
+    const range = max - min || 1
+    const w = 300
+    const h = 60
+    return chartPoints.map((val, i) => {
+      const x = (i / (chartPoints.length - 1)) * w
+      const y = h - ((val - min) / range) * (h - 4) - 2
+      return `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`
+    }).join(' ')
+  }, [chartPoints])
+
+  const fillPath = svgPath ? `${svgPath} L300,60 L0,60 Z` : ''
 
   return (
     <div
       className="scroll"
       style={{ height: '100%', background: c.cream, color: c.ink, display: 'flex', flexDirection: 'column', padding: '52px 22px 30px 22px' }}
     >
-      {/* Volver */}
+      {/* Back */}
       <button
         className="reset tap"
         onClick={() => dispatch({ type: 'GO', screen: 'app' })}
@@ -19,82 +85,120 @@ export default function Simulador() {
       </button>
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-        <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: c.clay, margin: 0, whiteSpace: 'nowrap' }}>
+        <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: c.clay, margin: 0 }}>
           Etapa 3 · Multiplicar
         </p>
-        <span style={{ background: c.greenChip, color: c.green, fontSize: 11, fontWeight: 700, padding: '5px 10px', borderRadius: 999, whiteSpace: 'nowrap', flex: 'none' }}>
-          Modo práctica
+        <span style={{ background: c.greenChip, color: c.green, fontSize: 11, fontWeight: 700, padding: '5px 10px', borderRadius: 999, whiteSpace: 'nowrap' }}>
+          Simulador
         </span>
       </div>
-      <h1 style={{ fontFamily: serif, fontWeight: 500, fontSize: 28, margin: '0 0 18px 0' }}>Tu portafolio de práctica</h1>
+      <h1 style={{ fontFamily: serif, fontWeight: 500, fontSize: 28, margin: '0 0 18px 0' }}>¿Cuánto crecería tu dinero?</h1>
 
-      {/* Tarjeta de valor */}
-      <div style={{ background: c.ink, color: c.cream, borderRadius: 18, padding: 20, marginBottom: 14 }}>
-        <p style={{ fontSize: 12, color: c.sage, margin: '0 0 4px 0', fontWeight: 600 }}>Valor simulado · empezaste con $10,000</p>
-        <p style={{ fontFamily: serif, fontSize: 40, fontWeight: 500, margin: '0 0 4px 0' }}>$10,687</p>
-        <p style={{ fontSize: 13, color: '#7FBF9C', fontWeight: 700, margin: '0 0 16px 0' }}>▲ +6.9% en 11 semanas</p>
-        <svg width="100%" height="56" viewBox="0 0 300 56" preserveAspectRatio="none" style={{ display: 'block' }}>
-          <path d="M0,44 C25,42 40,48 60,45 C85,41 100,30 125,33 C150,36 165,22 190,24 C215,26 235,14 260,12 C275,11 290,9 300,8" fill="none" stroke={c.clay} strokeWidth="2.5" />
-          <path d="M0,44 C25,42 40,48 60,45 C85,41 100,30 125,33 C150,36 165,22 190,24 C215,26 235,14 260,12 C275,11 290,9 300,8 L300,56 L0,56 Z" fill="rgba(196,98,45,0.15)" stroke="none" />
-        </svg>
+      {/* Inputs */}
+      <div style={{ display: 'flex', gap: 10, marginBottom: 14 }}>
+        <div style={{ flex: 1 }}>
+          <label style={{ fontSize: 11, fontWeight: 700, color: c.muted2, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Inversión inicial</label>
+          <input
+            type="number"
+            inputMode="numeric"
+            value={initial}
+            onChange={e => setInitial(e.target.value)}
+            style={{ width: '100%', marginTop: 6, padding: '12px 14px', borderRadius: 12, border: `1px solid ${c.cardBorder}`, background: c.card, fontSize: 16, fontWeight: 700, fontFamily: 'inherit', color: c.ink }}
+          />
+        </div>
+        <div style={{ flex: 1 }}>
+          <label style={{ fontSize: 11, fontWeight: 700, color: c.muted2, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Aporte mensual</label>
+          <input
+            type="number"
+            inputMode="numeric"
+            value={monthly}
+            onChange={e => setMonthly(e.target.value)}
+            style={{ width: '100%', marginTop: 6, padding: '12px 14px', borderRadius: 12, border: `1px solid ${c.cardBorder}`, background: c.card, fontSize: 16, fontWeight: 700, fontFamily: 'inherit', color: c.ink }}
+          />
+        </div>
       </div>
 
-      {/* Posiciones */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 14 }}>
-        <PositionRow sigla="ETF" siglaBg={c.greenChip} siglaColor={c.green} name="Fondo diversificado global" meta="70% del portafolio · riesgo medio" ret="+8.2%" />
-        <PositionRow sigla="RF" siglaBg="#F3E9DC" siglaColor={c.clayDark} name="Deuda gubernamental" meta="30% del portafolio · riesgo bajo" ret="+3.8%" />
+      {/* Risk profile */}
+      <p style={{ fontSize: 11, fontWeight: 700, color: c.muted2, letterSpacing: '0.08em', textTransform: 'uppercase', margin: '0 0 8px 0' }}>Perfil de riesgo</p>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+        {PROFILES.map(p => {
+          const on = profile.key === p.key
+          return (
+            <button
+              key={p.key}
+              className="reset tap"
+              onClick={() => setProfile(p)}
+              style={{ flex: 1, background: on ? c.ink : c.card, color: on ? c.cream : c.ink, border: on ? 'none' : `1px solid ${c.cardBorder}`, borderRadius: 12, padding: '10px 8px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}
+            >
+              <span style={{ fontSize: 20 }}>{p.emoji}</span>
+              <span style={{ fontSize: 11, fontWeight: on ? 700 : 600 }}>{p.label}</span>
+              <span style={{ fontSize: 10, color: on ? c.sage : c.muted2 }}>{(p.rate * 100).toFixed(0)}% anual</span>
+            </button>
+          )
+        })}
+      </div>
+
+      {/* Years */}
+      <p style={{ fontSize: 11, fontWeight: 700, color: c.muted2, letterSpacing: '0.08em', textTransform: 'uppercase', margin: '0 0 8px 0' }}>Plazo</p>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
+        {YEARS_OPTIONS.map(y => {
+          const on = years === y
+          return (
+            <button
+              key={y}
+              className="reset tap"
+              onClick={() => setYears(y)}
+              style={{ flex: 1, background: on ? c.ink : c.card, color: on ? c.cream : c.ink, border: on ? 'none' : `1px solid ${c.cardBorder}`, borderRadius: 999, padding: '9px 8px', fontSize: 13, fontWeight: on ? 700 : 600, textAlign: 'center' }}
+            >
+              {y} {y === 1 ? 'año' : 'años'}
+            </button>
+          )
+        })}
+      </div>
+
+      {/* Result card */}
+      <div style={{ background: c.ink, color: c.cream, borderRadius: 18, padding: 20, marginBottom: 14 }}>
+        <p style={{ fontSize: 12, color: c.sage, margin: '0 0 4px 0', fontWeight: 600 }}>
+          En {years} {years === 1 ? 'año' : 'años'} tendrías aprox.
+        </p>
+        <p style={{ fontFamily: serif, fontSize: 40, fontWeight: 500, margin: '0 0 4px 0' }}>{money(result.total)}</p>
+        <p style={{ fontSize: 13, color: result.gains >= 0 ? '#7FBF9C' : '#E8A57F', fontWeight: 700, margin: '0 0 16px 0' }}>
+          {result.gains >= 0 ? '▲' : '▼'} +{money(result.gains)} en ganancias
+        </p>
+        {svgPath && (
+          <svg width="100%" height="60" viewBox="0 0 300 60" preserveAspectRatio="none" style={{ display: 'block' }}>
+            <path d={fillPath} fill="rgba(196,98,45,0.15)" stroke="none" />
+            <path d={svgPath} fill="none" stroke={c.clay} strokeWidth="2.5" />
+          </svg>
+        )}
+      </div>
+
+      {/* Breakdown */}
+      <div style={{ display: 'flex', gap: 10, marginBottom: 14 }}>
+        <div style={{ flex: 1, background: c.card, border: `1px solid ${c.cardBorder}`, borderRadius: 14, padding: '14px 16px' }}>
+          <p style={{ fontSize: 11, color: c.muted2, margin: '0 0 4px 0', fontWeight: 600 }}>Invertido</p>
+          <p style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>{money(result.totalInvested)}</p>
+        </div>
+        <div style={{ flex: 1, background: c.card, border: `1px solid ${c.cardBorder}`, borderRadius: 14, padding: '14px 16px' }}>
+          <p style={{ fontSize: 11, color: c.muted2, margin: '0 0 4px 0', fontWeight: 600 }}>Ganancias</p>
+          <p style={{ fontSize: 18, fontWeight: 700, margin: 0, color: c.green }}>{money(result.gains)}</p>
+        </div>
       </div>
 
       {/* Insight */}
       <div style={{ background: c.card, border: `1px solid ${c.cardBorder}`, borderRadius: 14, padding: '14px 16px', marginBottom: 14 }}>
-        <p style={{ fontSize: 12, fontWeight: 700, color: c.clay, margin: '0 0 4px 0' }}>💡 Lo que aprendiste esta semana</p>
+        <p style={{ fontSize: 12, fontWeight: 700, color: c.clay, margin: '0 0 4px 0' }}>💡 {profile.emoji} Perfil {profile.label}</p>
         <p style={{ fontSize: 13, lineHeight: 1.5, color: '#43544A', margin: 0 }}>
-          En la caída del martes no vendiste. Ese es el comportamiento que separa al inversionista del apostador.
+          {profile.desc}. Rendimiento estimado: {(profile.rate * 100).toFixed(0)}% anual.
+          {result.gains > result.totalInvested * 0.5 && ' ¡El interés compuesto hace la diferencia con el tiempo!'}
         </p>
       </div>
 
-      {/* CTA */}
-      <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 10 }}>
-        <button
-          className="reset tap"
-          onClick={() => alert('Te conectaremos con plataformas reguladas en tu país (p. ej. Fintual CL/MX, Hapi LatAm).\n\nIngresarios no custodia tu dinero.')}
-          style={{ background: c.ink, color: c.cream, borderRadius: 999, padding: 15, textAlign: 'center', fontWeight: 700, fontSize: 15 }}
-        >
-          Estoy listo para invertir de verdad
-        </button>
-        <p style={{ fontSize: 11, color: c.muted2, textAlign: 'center', margin: 0, lineHeight: 1.5 }}>
-          Te conectamos con plataformas reguladas en tu país.<br />Ingresarios no custodia tu dinero.
-        </p>
-      </div>
-    </div>
-  )
-}
-
-function PositionRow({
-  sigla,
-  siglaBg,
-  siglaColor,
-  name,
-  meta,
-  ret,
-}: {
-  sigla: string
-  siglaBg: string
-  siglaColor: string
-  name: string
-  meta: string
-  ret: string
-}) {
-  return (
-    <div style={{ background: c.card, border: `1px solid ${c.cardBorder}`, borderRadius: 14, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
-      <div style={{ width: 36, height: 36, borderRadius: 10, background: siglaBg, color: siglaColor, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, flex: 'none' }}>
-        {sigla}
-      </div>
-      <div style={{ flex: 1 }}>
-        <p style={{ fontSize: 13.5, fontWeight: 700, margin: 0 }}>{name}</p>
-        <p style={{ fontSize: 11.5, color: c.muted2, margin: 0 }}>{meta}</p>
-      </div>
-      <span style={{ fontSize: 13, fontWeight: 700, color: c.green }}>{ret}</span>
+      {/* Disclaimer */}
+      <p style={{ fontSize: 11, color: c.muted2, textAlign: 'center', margin: 0, lineHeight: 1.5 }}>
+        Simulación ilustrativa. Rendimientos pasados no garantizan resultados futuros.<br />
+        Ingresarios no custodia tu dinero ni ofrece asesoría financiera.
+      </p>
     </div>
   )
 }
