@@ -1,39 +1,34 @@
-import { useState } from 'react'
-import { useStore, categoryLabel, fmt, type Entry } from '../store'
+import { useStore, categoryLabel } from '../store'
 import { useAuth } from '../lib/auth'
 import { c, serif } from '../theme'
 import ProgressBar from '../components/ProgressBar'
 
-const NODES = ['Ordenar', 'Aprender', 'Multiplicar'] as const
-
 function money(n: number) {
-  return '$' + n.toLocaleString('es-MX')
-}
-
-function timeAgo(ts: number): string {
-  const diff = Date.now() - ts
-  const mins = Math.floor(diff / 60000)
-  if (mins < 1) return 'hace un momento'
-  if (mins < 60) return `hace ${mins} min`
-  const hrs = Math.floor(mins / 60)
-  if (hrs < 24) return `hace ${hrs}h`
-  return `hace ${Math.floor(hrs / 24)}d`
+  return '$' + n.toLocaleString('es-MX', { maximumFractionDigits: 0 })
 }
 
 export default function Home() {
   const { state, dispatch } = useStore()
-  const { household, members, profile, viewMode, setViewMode, signOut } = useAuth()
-  const { budgets, route, entries, monthRemaining } = state
-  const latest: Entry | undefined = entries[0]
-  const latestMember = latest
-    ? members.find((m) => m.id === latest.userId) ?? { id: 'unknown', display_name: 'Familiar', avatar_initial: 'F', avatar_color: c.clay }
-    : undefined
-  const [cierreDismissed, setCierreDismissed] = useState(false)
+  const { household, profile, viewMode, setViewMode, members, signOut } = useAuth()
+  const { budgets, route, entries } = state
 
   const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
   const now = new Date()
   const weekNum = Math.ceil(now.getDate() / 7)
   const monthName = monthNames[now.getMonth()]
+
+  // Today's entries
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
+  const todayEntries = entries.filter(e => e.ts >= todayStart)
+  const todayGastos = todayEntries.filter(e => e.kind === 'gasto').reduce((s, e) => s + e.principal, 0)
+  const todayIngresos = todayEntries.filter(e => e.kind === 'ingreso').reduce((s, e) => s + e.principal, 0)
+
+  // Month totals
+  const monthGastos = entries.filter(e => e.kind === 'gasto').reduce((s, e) => s + e.principal, 0)
+  const monthIngresos = entries.filter(e => e.kind === 'ingreso').reduce((s, e) => s + e.principal, 0)
+
+  // Has the user logged today?
+  const loggedToday = todayEntries.length > 0
 
   return (
     <div
@@ -64,180 +59,110 @@ export default function Home() {
         </div>
       </div>
 
-      {/* View mode switch: Familiar ↔ Individual */}
+      {/* View mode switch */}
       {members.length > 1 && (
         <div style={{ padding: '0 22px 14px 22px' }}>
           <div className="mode-switch">
-            <button
-              className={`reset tap ${viewMode === 'familiar' ? 'active' : ''}`}
-              onClick={() => setViewMode('familiar')}
-            >
+            <button className={`reset tap ${viewMode === 'familiar' ? 'active' : ''}`} onClick={() => setViewMode('familiar')}>
               👨‍👩‍👧 Familiar
             </button>
-            <button
-              className={`reset tap ${viewMode === 'individual' ? 'active' : ''}`}
-              onClick={() => setViewMode('individual')}
-            >
+            <button className={`reset tap ${viewMode === 'individual' ? 'active' : ''}`} onClick={() => setViewMode('individual')}>
               👤 Individual
             </button>
           </div>
         </div>
       )}
 
-      {/* Notificación: cierre de mes listo */}
-      {!cierreDismissed && entries.length > 0 && (
+      {/* ── Daily prompt: not logged today ── */}
+      {!loggedToday && (
         <div style={{ padding: '0 22px 14px 22px' }}>
-          <div
-            className="tap"
-            onClick={() => dispatch({ type: 'OPEN_CIERRE' })}
-            style={{ background: 'rgba(196,98,45,0.12)', border: '1px solid rgba(196,98,45,0.35)', borderRadius: 14, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 11 }}
+          <button
+            className="reset tap"
+            onClick={() => dispatch({ type: 'OPEN_REGISTRO' })}
+            style={{ width: '100%', background: c.clay, color: c.cream, borderRadius: 16, padding: '16px 18px', display: 'flex', alignItems: 'center', gap: 14, textAlign: 'left' }}
           >
-            <span style={{ fontSize: 20, flex: 'none' }}>📊</span>
-            <div style={{ flex: 1 }}>
-              <p style={{ fontSize: 13, fontWeight: 700, margin: 0 }}>Tu cierre de mes está listo</p>
-              <p style={{ fontSize: 11.5, color: c.muted, margin: 0 }}>Toca para ver el resumen</p>
+            <div style={{ width: 42, height: 42, borderRadius: 999, background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flex: 'none' }}>
+              📝
             </div>
-            <button
-              className="reset tap"
-              aria-label="Descartar"
-              onClick={(e) => { e.stopPropagation(); setCierreDismissed(true) }}
-              style={{ fontSize: 13, color: c.muted2, flex: 'none', padding: 4 }}
-            >
-              ✕
-            </button>
+            <div>
+              <p style={{ fontSize: 15, fontWeight: 700, margin: '0 0 2px 0' }}>¿Qué gastaste hoy?</p>
+              <p style={{ fontSize: 12, color: 'rgba(245,241,233,0.7)', margin: 0 }}>
+                Registra para mantener tu racha de {route.streak} día{route.streak !== 1 ? 's' : ''} 🔥
+              </p>
+            </div>
+            <span style={{ fontSize: 18, flex: 'none', marginLeft: 'auto' }}>→</span>
+          </button>
+        </div>
+      )}
+
+      {/* ── Today's summary ── */}
+      {todayEntries.length > 0 && (
+        <div style={{ padding: '0 22px 14px 22px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 }}>
+            <h2 style={{ fontSize: 15, fontWeight: 700, margin: 0 }}>Hoy</h2>
+            <span style={{ fontSize: 12, color: c.green, fontWeight: 700 }}>✓ Racha activa</span>
+          </div>
+
+          {/* Today totals */}
+          <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
+            {todayGastos > 0 && (
+              <div style={{ flex: 1, background: c.card, border: `1px solid ${c.cardBorder}`, borderRadius: 14, padding: '12px 14px' }}>
+                <p style={{ fontSize: 11, color: c.muted2, margin: '0 0 2px 0', fontWeight: 600 }}>Gastos</p>
+                <p style={{ fontSize: 20, fontWeight: 700, margin: 0, color: c.clay }}>{money(todayGastos)}</p>
+              </div>
+            )}
+            {todayIngresos > 0 && (
+              <div style={{ flex: 1, background: c.card, border: `1px solid ${c.cardBorder}`, borderRadius: 14, padding: '12px 14px' }}>
+                <p style={{ fontSize: 11, color: c.muted2, margin: '0 0 2px 0', fontWeight: 600 }}>Ingresos</p>
+                <p style={{ fontSize: 20, fontWeight: 700, margin: 0, color: c.green }}>{money(todayIngresos)}</p>
+              </div>
+            )}
+          </div>
+
+          {/* Today's entries list */}
+          <div style={{ background: c.card, border: `1px solid ${c.cardBorder}`, borderRadius: 16, padding: '4px 0' }}>
+            {todayEntries.slice(0, 10).map((entry, i) => (
+              <div key={entry.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px', borderBottom: i < Math.min(todayEntries.length, 10) - 1 ? `1px solid ${c.cardBorder}` : 'none' }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: entry.kind === 'ingreso' ? c.green : c.clay, background: entry.kind === 'ingreso' ? c.greenChip : 'rgba(196,98,45,0.12)', padding: '3px 7px', borderRadius: 6, flex: 'none' }}>
+                  {entry.kind === 'ingreso' ? '+' : '−'}
+                </span>
+                <span style={{ fontSize: 13, fontWeight: 600, flex: 1 }}>{categoryLabel(entry.categoryKey)}</span>
+                <span style={{ fontSize: 13, fontWeight: 700, color: entry.kind === 'ingreso' ? c.green : c.ink }}>
+                  {entry.kind === 'ingreso' ? '+' : '-'}{money(entry.principal)}
+                </span>
+              </div>
+            ))}
           </div>
         </div>
       )}
 
-      {entries.length === 0 ? (
-        /* ── Welcome guide for new users ── */
-        <>
-          <div style={{ padding: '0 22px' }}>
-            <div style={{ background: c.ink, color: c.cream, borderRadius: 18, padding: '24px 20px' }}>
-              <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.16em', textTransform: 'uppercase', color: c.clay, margin: '0 0 10px 0' }}>
-                ¡Bienvenido a Geny!
-              </p>
-              <h2 style={{ fontFamily: serif, fontWeight: 500, fontSize: 22, lineHeight: 1.2, margin: '0 0 16px 0' }}>
-                Tu ruta para ordenar el dinero de tu familia
-              </h2>
-
-              {/* Steps */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                <button
-                  className="reset tap"
-                  onClick={() => dispatch({ type: 'OPEN_REGISTRO' })}
-                  style={{ display: 'flex', alignItems: 'center', gap: 14, background: 'rgba(196,98,45,0.2)', border: '1px solid rgba(196,98,45,0.5)', borderRadius: 14, padding: '14px 16px', textAlign: 'left' }}
-                >
-                  <div style={{ width: 36, height: 36, borderRadius: 999, background: c.clay, color: c.cream, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 16, flex: 'none' }}>1</div>
-                  <div>
-                    <p style={{ fontWeight: 700, fontSize: 14, margin: '0 0 2px 0', color: c.cream }}>Registra tu primer gasto</p>
-                    <p style={{ fontSize: 12, color: c.sage, margin: 0 }}>Toca aquí → ingresa lo que gastaste hoy</p>
-                  </div>
-                  <span style={{ fontSize: 16, color: c.clay, flex: 'none', marginLeft: 'auto' }}>→</span>
-                </button>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: 14, background: 'rgba(245,241,233,0.08)', border: '1px solid rgba(245,241,233,0.15)', borderRadius: 14, padding: '14px 16px', opacity: 0.6 }}>
-                  <div style={{ width: 36, height: 36, borderRadius: 999, background: 'rgba(245,241,233,0.12)', color: c.sage, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 16, flex: 'none' }}>2</div>
-                  <div>
-                    <p style={{ fontWeight: 600, fontSize: 14, margin: '0 0 2px 0', color: c.sage }}>Crea tu presupuesto</p>
-                    <p style={{ fontSize: 12, color: c.inkSecondary, margin: 0 }}>Define cuánto quieres gastar por categoría</p>
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: 14, background: 'rgba(245,241,233,0.08)', border: '1px solid rgba(245,241,233,0.15)', borderRadius: 14, padding: '14px 16px', opacity: 0.6 }}>
-                  <div style={{ width: 36, height: 36, borderRadius: 999, background: 'rgba(245,241,233,0.12)', color: c.sage, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 16, flex: 'none' }}>3</div>
-                  <div>
-                    <p style={{ fontWeight: 600, fontSize: 14, margin: '0 0 2px 0', color: c.sage }}>Registra cada día</p>
-                    <p style={{ fontSize: 12, color: c.inkSecondary, margin: 0 }}>Construye tu racha y desbloquea la siguiente etapa</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Tip */}
-          <div style={{ padding: '14px 22px 0 22px' }}>
-            <button
-              className="reset tap"
-              onClick={() => dispatch({ type: 'SET_TAB', tab: 'ruta' })}
-              style={{ width: '100%', background: c.card, border: `1px solid ${c.cardBorder}`, borderRadius: 14, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12, textAlign: 'left' }}
-            >
-              <span style={{ fontSize: 20, flex: 'none' }}>🗺️</span>
-              <div>
-                <p style={{ fontSize: 13, fontWeight: 700, margin: '0 0 2px 0', color: c.ink }}>Ve tu ruta completa</p>
-                <p style={{ fontSize: 12, color: c.muted, margin: 0 }}>Misiones paso a paso para ordenar tu dinero</p>
-              </div>
-              <span style={{ fontSize: 14, color: c.muted, flex: 'none', marginLeft: 'auto' }}>→</span>
+      {/* ── Month summary ── */}
+      <div style={{ padding: '0 22px 0 22px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 }}>
+          <h2 style={{ fontSize: 15, fontWeight: 700, margin: 0 }}>Este mes</h2>
+          {entries.length > 0 && (
+            <button className="reset tap" onClick={() => dispatch({ type: 'OPEN_CIERRE' })} style={{ fontSize: 12, color: c.clay, fontWeight: 700 }}>
+              Ver cierre →
             </button>
-          </div>
-        </>
-      ) : (
-        /* ── Normal view for returning users ── */
-        <>
-          {/* Tarjeta Ruta */}
-          <div style={{ padding: '0 22px' }}>
-            <div style={{ background: c.ink, color: c.cream, borderRadius: 18, padding: 20 }}>
-              <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: c.sage, margin: '0 0 12px 0' }}>
-                Tu ruta · Etapa {route.stage} de 3
-              </p>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 0, marginBottom: 14 }}>
-                {NODES.map((label, i) => {
-                  const n = i + 1
-                  const active = n === route.stage
-                  const node = (
-                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-                      <button
-                        className="reset tap"
-                        onClick={() => {
-                          dispatch({ type: 'SET_TAB', tab: 'ruta' })
-                        }}
-                        style={{
-                          width: 34,
-                          height: 34,
-                          borderRadius: 999,
-                          background: active ? c.clay : 'rgba(245,241,233,0.12)',
-                          color: active ? c.cream : c.sage,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontWeight: 700,
-                          fontSize: 14,
-                        }}
-                      >
-                        {n}
-                      </button>
-                      <span style={{ fontSize: 11, fontWeight: active ? 600 : 400, color: active ? c.cream : c.sage }}>{label}</span>
-                    </div>
-                  )
-                  if (i < NODES.length - 1) {
-                    const filled = i === 0 ? route.progress : 0
-                    return (
-                      <div key={label} style={{ display: 'contents' }}>
-                        {node}
-                        <div style={{ flex: 1, height: 2, background: 'rgba(245,241,233,0.2)', marginBottom: 20, position: 'relative' }}>
-                          <div style={{ position: 'absolute', left: 0, top: 0, height: 2, width: `${filled * 100}%`, background: c.clay }} />
-                        </div>
-                      </div>
-                    )
-                  }
-                  return <div key={label} style={{ display: 'contents' }}>{node}</div>
-                })}
-              </div>
-              <p style={{ fontSize: 13, lineHeight: 1.5, color: c.mist, margin: 0 }}>
-                {route.mission || 'Registra tus primeros gastos para comenzar tu ruta.'}
-              </p>
-            </div>
-          </div>
+          )}
+        </div>
 
-          {/* Este mes */}
-          <div style={{ padding: '18px 22px 0 22px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 }}>
-              <h2 style={{ fontSize: 15, fontWeight: 700, margin: 0 }}>Este mes</h2>
-              <span style={{ fontSize: 12.5, color: monthRemaining >= 0 ? c.green : c.clay, fontWeight: 700 }}>
-                {monthRemaining >= 0 ? `Quedan ${money(monthRemaining)}` : `Excedido ${money(Math.abs(monthRemaining))}`}
-              </span>
+        {entries.length > 0 ? (
+          <>
+            {/* Month totals */}
+            <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
+              <div style={{ flex: 1, background: c.card, border: `1px solid ${c.cardBorder}`, borderRadius: 14, padding: '12px 14px' }}>
+                <p style={{ fontSize: 11, color: c.muted2, margin: '0 0 2px 0', fontWeight: 600 }}>Gastos del mes</p>
+                <p style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>{money(monthGastos)}</p>
+              </div>
+              <div style={{ flex: 1, background: c.card, border: `1px solid ${c.cardBorder}`, borderRadius: 14, padding: '12px 14px' }}>
+                <p style={{ fontSize: 11, color: c.muted2, margin: '0 0 2px 0', fontWeight: 600 }}>Ingresos del mes</p>
+                <p style={{ fontSize: 20, fontWeight: 700, margin: 0, color: c.green }}>{money(monthIngresos)}</p>
+              </div>
             </div>
-            {budgets.length > 0 ? (
+
+            {/* Budget bars */}
+            {budgets.length > 0 && (
               <div style={{ background: c.card, border: `1px solid ${c.cardBorder}`, borderRadius: 16, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 13 }}>
                 {budgets.map((b) => {
                   const pct = b.limit > 0 ? b.spent / b.limit : 0
@@ -256,16 +181,43 @@ export default function Home() {
                   )
                 })}
               </div>
-            ) : (
-              <div style={{ background: c.card, border: `1px solid ${c.cardBorder}`, borderRadius: 16, padding: '24px 18px', textAlign: 'center' }}>
-                <p style={{ fontSize: 14, color: c.muted, margin: 0 }}>Aún no hay presupuestos este mes.<br />Ve a Presupuesto para crear uno.</p>
-              </div>
             )}
-          </div>
-        </>
-      )}
 
-      {/* FAB para registrar */}
+            {budgets.length === 0 && (
+              <button
+                className="reset tap"
+                onClick={() => dispatch({ type: 'SET_TAB', tab: 'presupuesto' })}
+                style={{ width: '100%', background: c.card, border: `1px solid ${c.cardBorder}`, borderRadius: 16, padding: '18px 16px', display: 'flex', alignItems: 'center', gap: 12, textAlign: 'left' }}
+              >
+                <span style={{ fontSize: 20, flex: 'none' }}>📊</span>
+                <div>
+                  <p style={{ fontSize: 13, fontWeight: 700, margin: '0 0 2px 0' }}>Crea tu presupuesto</p>
+                  <p style={{ fontSize: 12, color: c.muted, margin: 0 }}>Define límites por categoría para controlar tus gastos</p>
+                </div>
+                <span style={{ fontSize: 14, color: c.muted, flex: 'none', marginLeft: 'auto' }}>→</span>
+              </button>
+            )}
+          </>
+        ) : (
+          /* Empty state for new users */
+          <div style={{ background: c.card, border: `1px solid ${c.cardBorder}`, borderRadius: 16, padding: '28px 20px', textAlign: 'center' }}>
+            <span style={{ fontSize: 32 }}>📊</span>
+            <p style={{ fontSize: 14, fontWeight: 600, margin: '8px 0 4px 0' }}>Aquí verás tu resumen del mes</p>
+            <p style={{ fontSize: 13, color: c.muted, margin: '0 0 14px 0', lineHeight: 1.4 }}>
+              Registra tu primer gasto o ingreso y empieza a ver a dónde se va tu dinero.
+            </p>
+            <button
+              className="reset tap"
+              onClick={() => dispatch({ type: 'OPEN_REGISTRO' })}
+              style={{ background: c.clay, color: c.cream, borderRadius: 999, padding: '12px 24px', fontWeight: 700, fontSize: 14 }}
+            >
+              Registrar mi primer gasto →
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* FAB */}
       <button
         className="reset tap"
         onClick={() => dispatch({ type: 'OPEN_REGISTRO' })}
@@ -289,20 +241,6 @@ export default function Home() {
       >
         +
       </button>
-
-      {/* Actividad familiar */}
-      {latest && latestMember && (
-        <div style={{ padding: '14px 22px 0 22px' }}>
-          <div style={{ background: c.card, border: `1px solid ${c.cardBorder}`, borderRadius: 16, padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{ width: 34, height: 34, borderRadius: 999, background: latestMember.avatar_color, color: c.cream, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, flex: 'none' }}>
-              {latestMember.avatar_initial}
-            </div>
-            <p style={{ fontSize: 13, lineHeight: 1.45, color: '#43544A', margin: 0 }}>
-              <strong style={{ color: c.ink }}>{latestMember.display_name}</strong> registró {fmt(latest.amount, latest.currency)} en {categoryLabel(latest.categoryKey)} {timeAgo(latest.ts)}
-            </p>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
