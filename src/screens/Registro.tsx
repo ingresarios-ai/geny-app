@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useStore, MAIN_CATEGORIES, EXTRA_CATEGORIES, CURRENCIES, currencyByCode, toPrincipal } from '../store'
+import { useStore, MAIN_CATEGORIES, EXTRA_CATEGORIES, INCOME_CATEGORIES, CURRENCIES, currencyByCode, toPrincipal } from '../store'
 import { useAuth } from '../lib/auth'
 import * as api from '../lib/api'
 import { c, serif } from '../theme'
@@ -10,9 +10,9 @@ export default function Registro() {
   const { state, dispatch } = useStore()
   const { user, household, members } = useAuth()
   const [amount, setAmount] = useState('0')
-  const [category, setCategory] = useState('super')
+  const [kind, setKind] = useState<'gasto' | 'ingreso'>(state.registroKind)
+  const [category, setCategory] = useState(state.registroKind === 'ingreso' ? 'sueldo' : 'super')
   const [member, setMember] = useState(user?.id ?? '')
-  const [kind, setKind] = useState<'gasto' | 'ingreso'>('gasto')
   const [currency, setCurrency] = useState(household?.currency ?? 'MXN')
   const [showCurrencies, setShowCurrencies] = useState(false)
   const [showMore, setShowMore] = useState(false)
@@ -99,7 +99,7 @@ export default function Registro() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
         <button className="reset tap" aria-label="Cerrar" onClick={() => dispatch({ type: 'CLOSE_REGISTRO' })} style={{ fontSize: 15, color: c.muted2 }}>✕</button>
         <p style={{ fontSize: 14, fontWeight: 700, margin: 0 }}>Nuevo {kind === 'ingreso' ? 'ingreso' : 'gasto'}</p>
-        <button className="reset tap" onClick={() => setKind((k) => (k === 'gasto' ? 'ingreso' : 'gasto'))} style={{ fontSize: 13, color: kind === 'ingreso' ? c.green : c.muted2, fontWeight: kind === 'ingreso' ? 700 : 600 }}>
+        <button className="reset tap" onClick={() => { const next = kind === 'gasto' ? 'ingreso' : 'gasto'; setKind(next); setCategory(next === 'ingreso' ? 'sueldo' : 'super') }} style={{ fontSize: 13, color: kind === 'ingreso' ? c.green : c.muted2, fontWeight: kind === 'ingreso' ? 700 : 600 }}>
           {kind === 'ingreso' ? 'Gasto' : 'Ingreso'}
         </button>
       </div>
@@ -122,39 +122,57 @@ export default function Registro() {
         </button>
       </div>
 
-      {/* categoría */}
-      <p style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: c.muted2, margin: '0 0 10px 0' }}>Categoría</p>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginBottom: showMore ? 8 : 18 }}>
-        {MAIN_CATEGORIES.map((cat) => {
-          const on = category === cat.key
-          return (
-            <button key={cat.key} className="reset tap" onClick={() => setCategory(cat.key)} style={cellStyle(on)}>
-              <span style={{ fontSize: 18 }}>{cat.emoji}</span>
-              <span style={{ fontSize: 10, fontWeight: on ? 700 : 600 }}>{cat.label}</span>
+      {kind === 'gasto' ? (
+        <>
+          <p style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: c.muted2, margin: '0 0 10px 0' }}>Categoría</p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginBottom: showMore ? 8 : 18 }}>
+            {MAIN_CATEGORIES.map((cat) => {
+              const on = category === cat.key
+              return (
+                <button key={cat.key} className="reset tap" onClick={() => setCategory(cat.key)} style={cellStyle(on)}>
+                  <span style={{ fontSize: 18 }}>{cat.emoji}</span>
+                  <span style={{ fontSize: 10, fontWeight: on ? 700 : 600 }}>{cat.label}</span>
+                </button>
+              )
+            })}
+            <button
+              className="reset tap"
+              onClick={() => setShowMore((v) => !v)}
+              style={{ background: extraSelected ? c.ink : 'transparent', color: extraSelected ? c.cream : c.muted, border: `1px dashed ${extraSelected ? c.ink : c.cardBorder}`, borderRadius: 14, padding: '10px 4px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}
+            >
+              <span style={{ fontSize: 18 }}>⋯</span>
+              <span style={{ fontSize: 10, fontWeight: 600 }}>Más</span>
             </button>
-          )
-        })}
-        <button
-          className="reset tap"
-          onClick={() => setShowMore((v) => !v)}
-          style={{ background: extraSelected ? c.ink : 'transparent', color: extraSelected ? c.cream : c.muted, border: `1px dashed ${extraSelected ? c.ink : c.cardBorder}`, borderRadius: 14, padding: '10px 4px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}
-        >
-          <span style={{ fontSize: 18 }}>⋯</span>
-          <span style={{ fontSize: 10, fontWeight: 600 }}>Más</span>
-        </button>
-      </div>
-      {showMore && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginBottom: 18 }}>
-          {EXTRA_CATEGORIES.map((cat) => {
-            const on = category === cat.key
-            return (
-              <button key={cat.key} className="reset tap" onClick={() => setCategory(cat.key)} style={cellStyle(on)}>
-                <span style={{ fontSize: 18 }}>{cat.emoji}</span>
-                <span style={{ fontSize: 10, fontWeight: on ? 700 : 600 }}>{cat.label}</span>
-              </button>
-            )
-          })}
-        </div>
+          </div>
+          {showMore && (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginBottom: 18 }}>
+              {EXTRA_CATEGORIES.map((cat) => {
+                const on = category === cat.key
+                return (
+                  <button key={cat.key} className="reset tap" onClick={() => setCategory(cat.key)} style={cellStyle(on)}>
+                    <span style={{ fontSize: 18 }}>{cat.emoji}</span>
+                    <span style={{ fontSize: 10, fontWeight: on ? 700 : 600 }}>{cat.label}</span>
+                  </button>
+                )
+              })}
+            </div>
+          )}
+        </>
+      ) : (
+        <>
+          <p style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: c.muted2, margin: '0 0 10px 0' }}>Concepto</p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginBottom: 18 }}>
+            {INCOME_CATEGORIES.map((cat) => {
+              const on = category === cat.key
+              return (
+                <button key={cat.key} className="reset tap" onClick={() => setCategory(cat.key)} style={cellStyle(on)}>
+                  <span style={{ fontSize: 18 }}>{cat.emoji}</span>
+                  <span style={{ fontSize: 10, fontWeight: on ? 700 : 600 }}>{cat.label}</span>
+                </button>
+              )
+            })}
+          </div>
+        </>
       )}
 
       {/* ¿de quién? */}

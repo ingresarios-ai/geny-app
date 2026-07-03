@@ -41,6 +41,7 @@ interface State {
   screen: Screen
   tab: Tab
   registroOpen: boolean
+  registroKind: 'gasto' | 'ingreso'
   ocrOpen: boolean
   cierreOpen: boolean
   entries: Entry[]
@@ -115,7 +116,20 @@ export const EXTRA_CATEGORIES: Category[] = [
   { key: 'ahorro', label: 'Ahorro', emoji: '🐷' },
   { key: 'otros', label: 'Otros', emoji: '📦' },
 ]
-const ALL_CATEGORIES = [...MAIN_CATEGORIES, ...EXTRA_CATEGORIES]
+export const INCOME_CATEGORIES: Category[] = [
+  { key: 'sueldo', label: 'Sueldo', emoji: '💵' },
+  { key: 'negocio', label: 'Negocio', emoji: '🏪' },
+  { key: 'freelance', label: 'Freelance', emoji: '💻' },
+  { key: 'venta', label: 'Venta', emoji: '🏷️' },
+  { key: 'propina', label: 'Propina', emoji: '🪙' },
+  { key: 'bono', label: 'Bono', emoji: '🎯' },
+  { key: 'pension', label: 'Pensión', emoji: '🏛️' },
+  { key: 'renta', label: 'Renta', emoji: '🔑' },
+  { key: 'prestamo', label: 'Préstamo', emoji: '🤝' },
+  { key: 'regalo_ingreso', label: 'Regalo', emoji: '🎁' },
+  { key: 'otro_ingreso', label: 'Otro', emoji: '📦' },
+]
+const ALL_CATEGORIES = [...MAIN_CATEGORIES, ...EXTRA_CATEGORIES, ...INCOME_CATEGORIES]
 export function categoryLabel(key: string): string {
   const cat = ALL_CATEGORIES.find((c) => c.key === key)
   return cat ? cat.label : key.charAt(0).toUpperCase() + key.slice(1)
@@ -126,6 +140,7 @@ const initialState: State = {
   screen: 'onboarding',
   tab: 'hoy',
   registroOpen: false,
+  registroKind: 'gasto' as 'gasto' | 'ingreso',
   ocrOpen: false,
   cierreOpen: false,
   entries: [],
@@ -157,7 +172,7 @@ type Action =
   | { type: 'FINISH_ONBOARDING' }
   | { type: 'SET_TAB'; tab: Tab }
   | { type: 'GO'; screen: Screen }
-  | { type: 'OPEN_REGISTRO' }
+  | { type: 'OPEN_REGISTRO'; kind?: 'gasto' | 'ingreso' }
   | { type: 'CLOSE_REGISTRO' }
   | { type: 'OPEN_OCR' }
   | { type: 'CLOSE_OCR' }
@@ -178,7 +193,7 @@ function reducer(state: State, action: Action): State {
     case 'GO':
       return { ...state, screen: action.screen }
     case 'OPEN_REGISTRO':
-      return { ...state, registroOpen: true }
+      return { ...state, registroOpen: true, registroKind: action.kind ?? 'gasto' }
     case 'CLOSE_REGISTRO':
       return { ...state, registroOpen: false }
     case 'OPEN_OCR':

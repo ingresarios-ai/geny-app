@@ -26,6 +26,7 @@ export default function Ordenar() {
       desc: 'Anota lo que entra: sueldo, propina, venta, etc.',
       done: totalIngresos >= 1,
       icon: '💰',
+      action: () => dispatch({ type: 'OPEN_REGISTRO', kind: 'ingreso' }),
     },
     {
       key: 'racha3',
