@@ -9,7 +9,7 @@ function money(n: number) {
 
 export default function Home() {
   const { state, dispatch } = useStore()
-  const { household, profile, viewMode, setViewMode, members, signOut } = useAuth()
+  const { household, profile, viewMode, setViewMode, members } = useAuth()
   const { budgets, route, entries } = state
 
   const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
@@ -50,11 +50,11 @@ export default function Home() {
           </div>
           <button
             className="reset tap"
-            onClick={signOut}
-            aria-label="Cerrar sesión"
-            style={{ width: 34, height: 34, borderRadius: 999, background: c.card, border: `1px solid ${c.cardBorder}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}
+            onClick={() => dispatch({ type: 'OPEN_PERFIL' })}
+            aria-label="Mi perfil"
+            style={{ width: 34, height: 34, borderRadius: 999, background: c.ink, color: c.cream, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700 }}
           >
-            ↗
+            {profile?.avatar_initial ?? 'U'}
           </button>
         </div>
       </div>

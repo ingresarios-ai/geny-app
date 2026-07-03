@@ -11,6 +11,7 @@ import Registro from './screens/Registro'
 import OcrScanner from './screens/OcrScanner'
 import CierreMes from './screens/CierreMes'
 import Historial from './screens/Historial'
+import Perfil from './screens/Perfil'
 import Presupuesto from './screens/Presupuesto'
 import Tribu from './screens/Tribu'
 import TabBar from './components/TabBar'
@@ -103,6 +104,7 @@ export default function App() {
         {state.ocrOpen && <OcrScanner />}
         {state.cierreOpen && <CierreMes />}
         {state.historialOpen && <Historial />}
+        {state.perfilOpen && <Perfil />}
       </div>
     </div>
   )

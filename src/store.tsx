@@ -45,6 +45,7 @@ interface State {
   ocrOpen: boolean
   cierreOpen: boolean
   historialOpen: boolean
+  perfilOpen: boolean
   entries: Entry[]
   budgets: Budget[]
   route: RouteState
@@ -145,6 +146,7 @@ const initialState: State = {
   ocrOpen: false,
   cierreOpen: false,
   historialOpen: false,
+  perfilOpen: false,
   entries: [],
   budgets: [],
   route: {
@@ -182,6 +184,8 @@ type Action =
   | { type: 'CLOSE_CIERRE' }
   | { type: 'OPEN_HISTORIAL' }
   | { type: 'CLOSE_HISTORIAL' }
+  | { type: 'OPEN_PERFIL' }
+  | { type: 'CLOSE_PERFIL' }
   | { type: 'ADD_ENTRY_LOCAL'; entry: Entry }
   | { type: 'LOAD_DATA'; entries: Entry[]; budgets: Budget[]; route: RouteState; hasOnboarded: boolean }
   | { type: 'UPDATE_STREAK'; streak: number }
@@ -212,6 +216,10 @@ function reducer(state: State, action: Action): State {
       return { ...state, historialOpen: true }
     case 'CLOSE_HISTORIAL':
       return { ...state, historialOpen: false }
+    case 'OPEN_PERFIL':
+      return { ...state, perfilOpen: true }
+    case 'CLOSE_PERFIL':
+      return { ...state, perfilOpen: false }
     case 'ADD_ENTRY_LOCAL': {
       const e = action.entry
       const budgets = state.budgets.map((b) =>
