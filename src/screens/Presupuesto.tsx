@@ -55,113 +55,225 @@ export default function Presupuesto() {
 function GastoView() {
   const { state } = useStore()
   const { household } = useAuth()
-  const [showAdd, setShowAdd] = useState(false)
-  const [selectedCat, setSelectedCat] = useState<Category | null>(null)
-  const [limitInput, setLimitInput] = useState('')
+
+  // Setup wizard state
+  type Step = 'view' | 'select' | 'limits'
+  const [step, setStep] = useState<Step>('view')
+  const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set())
+  const [limits, setLimits] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState(false)
 
   const existingKeys = state.budgets.map(b => b.key)
-  const availableCats = ALL_CATS.filter(cat => !existingKeys.includes(cat.key))
   const now = new Date()
   const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
 
-  async function saveBudget() {
-    if (!selectedCat || !household || !limitInput) return
-    setSaving(true)
-    await api.upsertBudget({
-      household_id: household.id,
-      key: selectedCat.key,
-      label: selectedCat.label,
-      emoji: selectedCat.emoji,
-      budget_limit: Number(limitInput),
-      month,
+  function toggleCat(key: string) {
+    setSelectedKeys(prev => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
     })
-    // Reload page to refresh budgets from store
+  }
+
+  function goToLimits() {
+    // Pre-populate limits with empty strings
+    const newLimits: Record<string, string> = {}
+    selectedKeys.forEach(k => { newLimits[k] = '' })
+    setLimits(newLimits)
+    setStep('limits')
+  }
+
+  async function saveAllBudgets() {
+    if (!household) return
+    setSaving(true)
+    const promises = Array.from(selectedKeys).map(key => {
+      const cat = ALL_CATS.find(c2 => c2.key === key)
+      if (!cat || !limits[key]) return Promise.resolve()
+      return api.upsertBudget({
+        household_id: household.id,
+        key: cat.key,
+        label: cat.label,
+        emoji: cat.emoji,
+        budget_limit: Number(limits[key]),
+        month,
+      })
+    })
+    await Promise.all(promises)
     window.location.reload()
   }
 
-  return (
-    <>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 }}>
-        <span style={{ fontSize: 13, color: c.muted, fontWeight: 600 }}>Límites por categoría</span>
-        <span style={{ fontSize: 12.5, color: state.monthRemaining >= 0 ? c.green : c.clay, fontWeight: 700 }}>
-          {state.monthRemaining >= 0 ? `Quedan ${money(state.monthRemaining)}` : `Excedido ${money(Math.abs(state.monthRemaining))}`}
-        </span>
-      </div>
+  const allLimitsFilled = Array.from(selectedKeys).every(k => limits[k] && Number(limits[k]) > 0)
 
-      {state.budgets.length > 0 && (
-        <div style={{ background: c.card, border: `1px solid ${c.cardBorder}`, borderRadius: 16, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 13, marginBottom: 14 }}>
-          {state.budgets.map((b) => {
-            const pct = b.limit > 0 ? b.spent / b.limit : 0
-            const color = pct >= 0.95 ? c.clay : c.green
+  // ── Step: Select categories ──
+  if (step === 'select') {
+    return (
+      <>
+        <div style={{ background: c.ink, color: c.cream, borderRadius: 16, padding: '18px 20px', marginBottom: 14 }}>
+          <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: c.clay, margin: '0 0 6px 0' }}>Paso 1 de 2</p>
+          <p style={{ fontFamily: serif, fontSize: 20, fontWeight: 500, margin: '0 0 4px 0' }}>¿En qué categorías gastas?</p>
+          <p style={{ fontSize: 13, color: c.sage, margin: 0 }}>Selecciona todas las que apliquen a tu familia.</p>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 16 }}>
+          {ALL_CATS.map(cat => {
+            const on = selectedKeys.has(cat.key)
+            const alreadyExists = existingKeys.includes(cat.key)
             return (
-              <div key={b.key} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <span style={{ fontSize: 17, flex: 'none' }}>{b.emoji}</span>
-                <div style={{ flex: 1 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, fontWeight: 600, marginBottom: 5 }}>
-                    <span>{b.label}</span>
-                    <span>{money(b.spent)} / {money(b.limit)}</span>
-                  </div>
-                  <ProgressBar pct={Math.min(pct, 1)} color={color} />
-                </div>
-              </div>
+              <button
+                key={cat.key}
+                className="reset tap"
+                onClick={() => !alreadyExists && toggleCat(cat.key)}
+                style={{
+                  background: on ? c.ink : alreadyExists ? c.emptyBar : c.card,
+                  color: on ? c.cream : alreadyExists ? c.muted : c.ink,
+                  border: `2px solid ${on ? c.clay : alreadyExists ? c.emptyBar : c.cardBorder}`,
+                  borderRadius: 14,
+                  padding: '14px 8px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: 5,
+                  opacity: alreadyExists ? 0.5 : 1,
+                }}
+              >
+                <span style={{ fontSize: 22 }}>{cat.emoji}</span>
+                <span style={{ fontSize: 11.5, fontWeight: on ? 700 : 600 }}>{cat.label}</span>
+                {alreadyExists && <span style={{ fontSize: 9, color: c.muted }}>Ya tienes</span>}
+              </button>
             )
           })}
         </div>
-      )}
 
-      {/* Add budget form */}
-      {!showAdd ? (
-        <button
-          className="reset tap"
-          onClick={() => setShowAdd(true)}
-          style={{ width: '100%', background: c.ink, color: c.cream, borderRadius: 14, padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontWeight: 700, fontSize: 14 }}
-        >
-          + Agregar categoría al presupuesto
-        </button>
-      ) : (
-        <div style={{ background: c.card, border: `1px solid ${c.cardBorder}`, borderRadius: 16, padding: 16 }}>
-          <p style={{ fontSize: 12, fontWeight: 700, color: c.muted2, letterSpacing: '0.08em', textTransform: 'uppercase', margin: '0 0 10px 0' }}>Categoría</p>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6, marginBottom: 14 }}>
-            {availableCats.map(cat => {
-              const on = selectedCat?.key === cat.key
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button className="reset tap" onClick={() => { setStep('view'); setSelectedKeys(new Set()) }} style={{ flex: 1, padding: 14, borderRadius: 999, border: `1px solid ${c.cardBorder}`, fontSize: 14, fontWeight: 700, color: c.muted }}>
+            Cancelar
+          </button>
+          <button
+            className="reset tap"
+            onClick={goToLimits}
+            disabled={selectedKeys.size === 0}
+            style={{ flex: 1, padding: 14, borderRadius: 999, background: c.clay, color: c.cream, fontSize: 14, fontWeight: 700, opacity: selectedKeys.size === 0 ? 0.5 : 1 }}
+          >
+            Siguiente → Poner límites
+          </button>
+        </div>
+      </>
+    )
+  }
+
+  // ── Step: Set limits for selected categories ──
+  if (step === 'limits') {
+    const selectedCats = ALL_CATS.filter(cat => selectedKeys.has(cat.key))
+    const totalBudget = Object.values(limits).reduce((s, v) => s + (Number(v) || 0), 0)
+
+    return (
+      <>
+        <div style={{ background: c.ink, color: c.cream, borderRadius: 16, padding: '18px 20px', marginBottom: 14 }}>
+          <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: c.clay, margin: '0 0 6px 0' }}>Paso 2 de 2</p>
+          <p style={{ fontFamily: serif, fontSize: 20, fontWeight: 500, margin: '0 0 4px 0' }}>¿Cuánto puedes gastar en cada una?</p>
+          <p style={{ fontSize: 13, color: c.sage, margin: 0 }}>Define tu límite mensual por categoría.</p>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 14 }}>
+          {selectedCats.map(cat => (
+            <div key={cat.key} style={{ background: c.card, border: `1px solid ${c.cardBorder}`, borderRadius: 14, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12 }}>
+              <span style={{ fontSize: 20, flex: 'none' }}>{cat.emoji}</span>
+              <span style={{ fontSize: 13, fontWeight: 700, flex: 1 }}>{cat.label}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <span style={{ fontSize: 16, fontWeight: 700, color: c.muted2 }}>$</span>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  placeholder="0"
+                  value={limits[cat.key] || ''}
+                  onChange={e => setLimits(prev => ({ ...prev, [cat.key]: e.target.value }))}
+                  style={{ width: 90, padding: '10px 8px', borderRadius: 10, border: `1px solid ${c.cardBorder}`, background: c.cream, fontSize: 16, fontWeight: 700, fontFamily: 'inherit', color: c.ink, textAlign: 'right', boxSizing: 'border-box' }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Total */}
+        <div style={{ background: c.card, border: `1px solid ${c.cardBorder}`, borderRadius: 14, padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <span style={{ fontSize: 13, fontWeight: 600, color: c.muted }}>Presupuesto total</span>
+          <span style={{ fontSize: 18, fontWeight: 700, color: c.ink }}>{money(totalBudget)}/mes</span>
+        </div>
+
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button className="reset tap" onClick={() => setStep('select')} style={{ flex: 1, padding: 14, borderRadius: 999, border: `1px solid ${c.cardBorder}`, fontSize: 14, fontWeight: 700, color: c.muted }}>
+            ← Categorías
+          </button>
+          <button
+            className="reset tap"
+            onClick={saveAllBudgets}
+            disabled={saving || !allLimitsFilled}
+            style={{ flex: 1, padding: 14, borderRadius: 999, background: c.clay, color: c.cream, fontSize: 14, fontWeight: 700, opacity: saving || !allLimitsFilled ? 0.5 : 1 }}
+          >
+            {saving ? 'Guardando…' : 'Guardar presupuesto'}
+          </button>
+        </div>
+      </>
+    )
+  }
+
+  // ── Default: View existing budgets ──
+  return (
+    <>
+      {state.budgets.length > 0 && (
+        <>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 }}>
+            <span style={{ fontSize: 13, color: c.muted, fontWeight: 600 }}>Límites por categoría</span>
+            <span style={{ fontSize: 12.5, color: state.monthRemaining >= 0 ? c.green : c.clay, fontWeight: 700 }}>
+              {state.monthRemaining >= 0 ? `Quedan ${money(state.monthRemaining)}` : `Excedido ${money(Math.abs(state.monthRemaining))}`}
+            </span>
+          </div>
+          <div style={{ background: c.card, border: `1px solid ${c.cardBorder}`, borderRadius: 16, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 13, marginBottom: 14 }}>
+            {state.budgets.map((b) => {
+              const pct = b.limit > 0 ? b.spent / b.limit : 0
+              const color = pct >= 0.95 ? c.clay : c.green
               return (
-                <button key={cat.key} className="reset tap" onClick={() => setSelectedCat(cat)} style={{ background: on ? c.ink : 'transparent', color: on ? c.cream : c.ink, border: `1px solid ${on ? c.ink : c.cardBorder}`, borderRadius: 12, padding: '8px 4px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
-                  <span style={{ fontSize: 16 }}>{cat.emoji}</span>
-                  <span style={{ fontSize: 9.5, fontWeight: on ? 700 : 600 }}>{cat.label}</span>
-                </button>
+                <div key={b.key} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <span style={{ fontSize: 17, flex: 'none' }}>{b.emoji}</span>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, fontWeight: 600, marginBottom: 5 }}>
+                      <span>{b.label}</span>
+                      <span>{money(b.spent)} / {money(b.limit)}</span>
+                    </div>
+                    <ProgressBar pct={Math.min(pct, 1)} color={color} />
+                  </div>
+                </div>
               )
             })}
           </div>
+        </>
+      )}
 
-          {selectedCat && (
-            <>
-              <p style={{ fontSize: 12, fontWeight: 700, color: c.muted2, letterSpacing: '0.08em', textTransform: 'uppercase', margin: '0 0 6px 0' }}>
-                Límite mensual para {selectedCat.label}
-              </p>
-              <input
-                type="number"
-                inputMode="numeric"
-                placeholder="Ej: 3000"
-                value={limitInput}
-                onChange={e => setLimitInput(e.target.value)}
-                style={{ width: '100%', padding: '12px 14px', borderRadius: 12, border: `1px solid ${c.cardBorder}`, background: c.cream, fontSize: 16, fontWeight: 700, fontFamily: 'inherit', color: c.ink, marginBottom: 12, boxSizing: 'border-box' }}
-              />
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button className="reset tap" onClick={() => { setShowAdd(false); setSelectedCat(null); setLimitInput('') }} style={{ flex: 1, padding: 12, borderRadius: 999, border: `1px solid ${c.cardBorder}`, fontSize: 13, fontWeight: 700, color: c.muted }}>
-                  Cancelar
-                </button>
-                <button className="reset tap" onClick={saveBudget} disabled={saving || !limitInput} style={{ flex: 1, padding: 12, borderRadius: 999, background: c.clay, color: c.cream, fontSize: 13, fontWeight: 700, opacity: saving || !limitInput ? 0.5 : 1 }}>
-                  {saving ? 'Guardando…' : 'Guardar'}
-                </button>
-              </div>
-            </>
-          )}
-
-          {!selectedCat && availableCats.length === 0 && (
-            <p style={{ fontSize: 13, color: c.muted, margin: 0, textAlign: 'center' }}>Ya tienes presupuesto en todas las categorías.</p>
-          )}
+      {state.budgets.length === 0 ? (
+        /* Empty state — guide to create */
+        <div style={{ background: c.card, border: `1px solid ${c.cardBorder}`, borderRadius: 16, padding: '28px 20px', textAlign: 'center' }}>
+          <span style={{ fontSize: 32 }}>📊</span>
+          <p style={{ fontSize: 15, fontWeight: 700, margin: '8px 0 4px 0' }}>Crea tu presupuesto</p>
+          <p style={{ fontSize: 13, color: c.muted, margin: '0 0 16px 0', lineHeight: 1.4 }}>
+            Primero elige tus categorías de gasto y luego pon un límite a cada una.
+          </p>
+          <button
+            className="reset tap"
+            onClick={() => setStep('select')}
+            style={{ background: c.clay, color: c.cream, borderRadius: 999, padding: '14px 28px', fontWeight: 700, fontSize: 14 }}
+          >
+            Configurar presupuesto →
+          </button>
         </div>
+      ) : (
+        <button
+          className="reset tap"
+          onClick={() => setStep('select')}
+          style={{ width: '100%', background: c.ink, color: c.cream, borderRadius: 14, padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontWeight: 700, fontSize: 14 }}
+        >
+          + Agregar más categorías
+        </button>
       )}
     </>
   )
