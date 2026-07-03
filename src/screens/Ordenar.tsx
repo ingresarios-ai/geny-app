@@ -100,7 +100,10 @@ export default function Ordenar() {
               if (m.done) return
               if ('action' in m && m.action) {
                 m.action()
-              } else if (!m.done) {
+              } else if ('progress' in m) {
+                // Progress-based missions (racha) — just show a tip
+                return
+              } else {
                 dispatch({ type: 'OPEN_REGISTRO' })
               }
             }}
@@ -113,7 +116,7 @@ export default function Ordenar() {
               alignItems: 'center',
               gap: 14,
               opacity: m.done ? 0.85 : 1,
-              cursor: m.done ? 'default' : 'pointer',
+              cursor: m.done || 'progress' in m ? 'default' : 'pointer',
               textAlign: 'left',
             }}
           >
@@ -144,7 +147,7 @@ export default function Ordenar() {
                     : m.desc}
               </p>
             </div>
-            {!m.done && (
+            {!m.done && !('progress' in m) && (
               <span style={{ fontSize: 16, color: c.sage, flex: 'none' }}>→</span>
             )}
           </button>
