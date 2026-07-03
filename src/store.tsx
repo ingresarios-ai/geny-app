@@ -44,6 +44,7 @@ interface State {
   registroKind: 'gasto' | 'ingreso'
   ocrOpen: boolean
   cierreOpen: boolean
+  historialOpen: boolean
   entries: Entry[]
   budgets: Budget[]
   route: RouteState
@@ -143,6 +144,7 @@ const initialState: State = {
   registroKind: 'gasto' as 'gasto' | 'ingreso',
   ocrOpen: false,
   cierreOpen: false,
+  historialOpen: false,
   entries: [],
   budgets: [],
   route: {
@@ -178,6 +180,8 @@ type Action =
   | { type: 'CLOSE_OCR' }
   | { type: 'OPEN_CIERRE' }
   | { type: 'CLOSE_CIERRE' }
+  | { type: 'OPEN_HISTORIAL' }
+  | { type: 'CLOSE_HISTORIAL' }
   | { type: 'ADD_ENTRY_LOCAL'; entry: Entry }
   | { type: 'LOAD_DATA'; entries: Entry[]; budgets: Budget[]; route: RouteState; hasOnboarded: boolean }
   | { type: 'UPDATE_STREAK'; streak: number }
@@ -204,6 +208,10 @@ function reducer(state: State, action: Action): State {
       return { ...state, cierreOpen: true }
     case 'CLOSE_CIERRE':
       return { ...state, cierreOpen: false }
+    case 'OPEN_HISTORIAL':
+      return { ...state, historialOpen: true }
+    case 'CLOSE_HISTORIAL':
+      return { ...state, historialOpen: false }
     case 'ADD_ENTRY_LOCAL': {
       const e = action.entry
       const budgets = state.budgets.map((b) =>

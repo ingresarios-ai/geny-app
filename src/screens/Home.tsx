@@ -136,6 +136,26 @@ export default function Home() {
         </div>
       )}
 
+      {/* Historial link */}
+      {entries.length > 0 && (
+        <div style={{ padding: '0 22px 14px 22px' }}>
+          <button
+            className="reset tap"
+            onClick={() => dispatch({ type: 'OPEN_HISTORIAL' })}
+            style={{ width: '100%', background: c.card, border: `1px solid ${c.cardBorder}`, borderRadius: 14, padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontSize: 18 }}>📋</span>
+              <div>
+                <p style={{ fontSize: 13, fontWeight: 700, margin: '0 0 1px 0' }}>Ver historial completo</p>
+                <p style={{ fontSize: 11.5, color: c.muted, margin: 0 }}>{entries.length} registros día por día</p>
+              </div>
+            </div>
+            <span style={{ fontSize: 14, color: c.muted, flex: 'none' }}>→</span>
+          </button>
+        </div>
+      )}
+
       {/* ── Month summary ── */}
       <div style={{ padding: '0 22px 0 22px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 }}>

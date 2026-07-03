@@ -10,6 +10,7 @@ import Coach from './screens/Coach'
 import Registro from './screens/Registro'
 import OcrScanner from './screens/OcrScanner'
 import CierreMes from './screens/CierreMes'
+import Historial from './screens/Historial'
 import Presupuesto from './screens/Presupuesto'
 import Tribu from './screens/Tribu'
 import TabBar from './components/TabBar'
@@ -101,6 +102,7 @@ export default function App() {
         {state.registroOpen && <Registro />}
         {state.ocrOpen && <OcrScanner />}
         {state.cierreOpen && <CierreMes />}
+        {state.historialOpen && <Historial />}
       </div>
     </div>
   )
