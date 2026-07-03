@@ -12,7 +12,7 @@ const OPTIONS: { stage: Stage; title: string; desc: string }[] = [
 
 export default function Onboarding() {
   const { dispatch } = useStore()
-  const { household, refreshProfile } = useAuth()
+  const { household, refreshProfile, signOut } = useAuth()
   const [selected, setSelected] = useState<Stage>(1)
   const [saving, setSaving] = useState(false)
 
@@ -72,9 +72,19 @@ export default function Onboarding() {
         padding: '58px 24px 40px 24px',
       }}
     >
-      <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', color: c.clay, margin: '0 0 14px 0' }}>
-        Geny <span style={{ color: c.sage }}>by INGRESARIOS</span>
-      </p>
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+        <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', color: c.clay, margin: 0 }}>
+          Geny <span style={{ color: c.sage }}>by INGRESARIOS</span>
+        </p>
+        <button
+          className="reset tap"
+          onClick={signOut}
+          style={{ fontSize: 12, color: c.sage, background: 'none', border: 'none', cursor: 'pointer', padding: '4px 0' }}
+        >
+          Cerrar sesión
+        </button>
+      </div>
       <h1 style={{ fontFamily: serif, fontWeight: 500, fontSize: 34, lineHeight: 1.1, margin: '0 0 10px 0', textWrap: 'balance' as any }}>
         ¿Dónde está el dinero de tu familia hoy?
       </h1>
