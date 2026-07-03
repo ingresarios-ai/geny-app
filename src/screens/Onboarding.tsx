@@ -12,7 +12,7 @@ const OPTIONS: { stage: Stage; title: string; desc: string }[] = [
 
 export default function Onboarding() {
   const { dispatch } = useStore()
-  const { household } = useAuth()
+  const { household, refreshProfile } = useAuth()
   const [selected, setSelected] = useState<Stage>(1)
   const [saving, setSaving] = useState(false)
 
@@ -27,10 +27,24 @@ export default function Onboarding() {
   }
 
   async function empezar() {
-    if (!household) return
     setSaving(true)
     try {
-      await api.updateRouteProgress(household.id, {
+      // If household isn't loaded yet, try refreshing
+      let hh = household
+      if (!hh) {
+        console.warn('[Onboarding] household null, refreshing profile...')
+        await refreshProfile()
+        // Small delay to allow state to propagate
+        await new Promise(r => setTimeout(r, 500))
+      }
+      // Re-read from the auth context after refresh
+      hh = household
+      if (!hh) {
+        console.error('[Onboarding] household still null after refresh')
+        alert('Error cargando los datos. Intenta cerrar sesión y volver a entrar.')
+        return
+      }
+      await api.updateRouteProgress(hh.id, {
         stage: selected,
         progress: 0,
         mission: selected === 1

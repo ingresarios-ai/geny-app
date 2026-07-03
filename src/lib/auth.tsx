@@ -60,31 +60,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Load profile and household data
   async function loadUserData(userId: string) {
     // Fetch profile
-    const { data: prof } = await supabase
+    const { data: prof, error: profErr } = await supabase
       .from('profiles')
       .select('*')
       .eq('id', userId)
       .single()
+
+    if (profErr) console.error('[loadUserData] profile error:', profErr)
 
     if (prof) {
       setProfile(prof as Profile)
 
       // Fetch household
       if (prof.household_id) {
-        const { data: hh } = await supabase
+        const { data: hh, error: hhErr } = await supabase
           .from('households')
           .select('*')
           .eq('id', prof.household_id)
           .single()
 
+        if (hhErr) console.error('[loadUserData] household error:', hhErr)
         if (hh) setHousehold(hh as Household)
 
         // Fetch household members
-        const { data: mems } = await supabase
+        const { data: mems, error: memsErr } = await supabase
           .from('profiles')
           .select('id, display_name, avatar_initial, avatar_color')
           .eq('household_id', prof.household_id)
 
+        if (memsErr) console.error('[loadUserData] members error:', memsErr)
         if (mems) setMembers(mems as HouseholdMember[])
       }
     }
