@@ -128,7 +128,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     meta: { display_name: string; family_name: string; phone: string; phone_country: string },
   ): Promise<{ error: string | null }> {
     try {
-      const { error } = await supabase.auth.signUp({
+      const result = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -140,9 +140,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           },
         },
       })
-      if (error) return { error: error.message || 'Error al crear la cuenta' }
+
+      console.log('[signUp] full result:', JSON.stringify(result, null, 2))
+
+      if (result.error) {
+        const msg = result.error.message
+          || result.error.msg
+          || (typeof result.error === 'string' ? result.error : null)
+          || JSON.stringify(result.error)
+        // Filter useless messages
+        if (!msg || msg === '{}' || msg === 'null') {
+          return { error: 'Error al crear la cuenta. Intenta con otro correo.' }
+        }
+        return { error: msg }
+      }
+
+      // Supabase returns user but no session when email confirmation is pending
+      // Some configs return a "fake" user with no identities when user already exists
+      if (result.data?.user && result.data.user.identities?.length === 0) {
+        return { error: 'Ya existe una cuenta con este correo electrónico.' }
+      }
+
       return { error: null }
     } catch (e: unknown) {
+      console.error('[signUp] exception:', e)
       const msg = e instanceof Error ? e.message : 'Error inesperado al crear la cuenta'
       return { error: msg }
     }
